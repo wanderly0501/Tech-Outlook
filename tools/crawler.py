@@ -48,4 +48,6 @@ def crawl(site: str, date: str) -> list[dict]:
     for article in new_articles:
         db.insert_article(article, site=site)
 
+    db.enforce_article_limit()
+
     return new_articles

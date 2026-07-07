@@ -21,7 +21,9 @@ from flask import Flask, request, jsonify, render_template, send_from_directory
 
 import chat_agent
 from core.agent_loop import run_agent_loop, build_system_prompt
-from tools.config import REPORTS_DIR, MEMORY_DIR, MEMORY_FILES
+from tools.config import REPORTS_DIR, MEMORY_DIR, MEMORY_FILES, PROJECT_ROOT
+
+LOGO_DIR = PROJECT_ROOT / "logo"
 
 app = Flask(__name__)
 
@@ -44,6 +46,22 @@ _reset_session()
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/logo.png")
+def logo():
+    return send_from_directory(LOGO_DIR, "logo.png")
+
+
+@app.route("/logo/<path:filename>")
+def logo_asset(filename):
+    # Generated reports (tools/write_report.py) reference the logo via a
+    # relative "../logo/logo.png" path so it resolves correctly when a
+    # report is opened directly via file://. Served through here at
+    # /reports/<file>.html, that same relative path resolves to
+    # /logo/logo.png — this route mirrors the on-disk layout so it
+    # resolves correctly in both cases.
+    return send_from_directory(LOGO_DIR, filename)
 
 
 @app.route("/api/memory/<name>")
@@ -93,6 +111,7 @@ def chat():
 @app.route("/api/end_session", methods=["POST"])
 def end_session():
     if _state["messages"]:
+        chat_agent.close_session(_state["messages"], _system_prompt)
         chat_agent.save_conversation(_state["messages"], _state["started_at"])
     _reset_session()
     return jsonify({"success": True})

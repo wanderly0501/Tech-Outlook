@@ -78,7 +78,7 @@ def extract_content(html_content: str) -> dict:
 
 
 def crawl(target_date: date, max_num: int = 500) -> list[dict]:
-    """Crawl The Verge for articles published on or after target_date."""
+    """Crawl The Verge for articles published on target_date specifically."""
     crawler = WebCrawler(
         start_urls=START_URLS,
         allowed_domains=ALLOWED_DOMAINS,
@@ -91,11 +91,15 @@ def crawl(target_date: date, max_num: int = 500) -> list[dict]:
     results = crawler.crawl()
 
     articles = []
+    skipped_no_html = 0
+    skipped_no_content = 0
     for result in results:
         if not result.html_content:
+            skipped_no_html += 1
             continue
         parsed = extract_content(result.html_content)
         if not parsed["title"] or not parsed["content"]:
+            skipped_no_content += 1
             continue
         published_at = extract_date(result.html_content)
         articles.append({
@@ -105,4 +109,13 @@ def crawl(target_date: date, max_num: int = 500) -> list[dict]:
             "content": parsed["content"],
             "summary": None,
         })
+
+    if skipped_no_html or skipped_no_content:
+        print(
+            f"[theverge] crawl matched {len(results)} date-eligible pages but "
+            f"only extracted {len(articles)} articles "
+            f"({skipped_no_html} failed to fetch, {skipped_no_content} fetched "
+            f"but had no extractable title/content)",
+            flush=True,
+        )
     return articles

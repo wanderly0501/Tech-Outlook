@@ -11,7 +11,7 @@ import json
 import sqlite3
 from datetime import datetime, timezone
 
-from tools.config import DB_PATH
+from tools.config import DB_PATH, MAX_ARTICLES
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS articles (
@@ -147,6 +147,31 @@ def insert_article(article: dict, site: str) -> int:
         )
         conn.commit()
         return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def enforce_article_limit(max_items: int = MAX_ARTICLES) -> int:
+    """
+    Delete the oldest articles (by crawled_at) once the table exceeds
+    max_items. Returns the number of rows deleted. The articles_ad
+    trigger keeps articles_fts in sync automatically.
+    """
+    conn = get_connection()
+    try:
+        count = conn.execute("SELECT COUNT(*) FROM articles").fetchone()[0]
+        overflow = count - max_items
+        if overflow <= 0:
+            return 0
+        conn.execute(
+            """
+            DELETE FROM articles
+            WHERE id IN (SELECT id FROM articles ORDER BY crawled_at ASC LIMIT ?)
+            """,
+            (overflow,),
+        )
+        conn.commit()
+        return overflow
     finally:
         conn.close()
 

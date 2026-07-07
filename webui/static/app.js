@@ -9,12 +9,16 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Auto-links bare URLs so article citations from the agent are clickable.
+// Renders the light markdown used in memory files and agent replies:
+// **bold** (session.md, top_of_mind.md, etc. use this for field labels)
+// and bare URLs, which get auto-linked so article citations are clickable.
 function linkify(text) {
-  return escapeHtml(text).replace(
-    /(https?:\/\/[^\s)]+)/g,
-    (url) => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
-  );
+  return escapeHtml(text)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(
+      /(https?:\/\/[^\s)]+)/g,
+      (url) => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`
+    );
 }
 
 function addMessage(role, text, { pending = false } = {}) {
@@ -111,6 +115,43 @@ async function loadReports() {
 }
 
 loadMemory("top_of_mind", "top-of-mind", "No highlights yet.");
-loadMemory("session", "session-info", "No pipeline runs yet.");
+loadMemory("pipeline_session", "session-info", "No pipeline runs yet.");
+loadMemory("chat_session", "chat-history", "No past sessions yet.");
 loadReports();
 inputEl.focus();
+
+// --- Foldable sidebar tabs -------------------------------------------------
+document.querySelectorAll(".tab-header").forEach((header) => {
+  header.addEventListener("click", () => {
+    header.closest(".panel").classList.toggle("open");
+  });
+});
+
+// --- Resizable sidebar ------------------------------------------------------
+const sidebarEl = document.getElementById("sidebar");
+const resizerEl = document.getElementById("sidebar-resizer");
+const MIN_SIDEBAR_WIDTH = 260;
+const MAX_SIDEBAR_WIDTH = 640;
+
+resizerEl.addEventListener("mousedown", (e) => {
+  e.preventDefault();
+  resizerEl.classList.add("dragging");
+  document.body.style.userSelect = "none";
+
+  function onMouseMove(moveEvent) {
+    const sidebarLeft = sidebarEl.getBoundingClientRect().left;
+    let width = moveEvent.clientX - sidebarLeft;
+    width = Math.max(MIN_SIDEBAR_WIDTH, Math.min(MAX_SIDEBAR_WIDTH, width));
+    document.documentElement.style.setProperty("--sidebar-width", `${width}px`);
+  }
+
+  function onMouseUp() {
+    resizerEl.classList.remove("dragging");
+    document.body.style.userSelect = "";
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+  }
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+});

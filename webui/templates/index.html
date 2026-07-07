@@ -4,30 +4,58 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tech Lookout</title>
+  <link rel="icon" type="image/png" href="/logo.png">
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
   <div class="layout">
-    <aside class="sidebar">
-      <h1>Tech Lookout</h1>
+    <aside class="sidebar" id="sidebar">
+      <div class="accordion">
+        <section class="panel">
+          <button class="tab-header" data-target="top-of-mind-body">
+            <span>🔥 Top of Mind</span>
+            <span class="chevron">▸</span>
+          </button>
+          <div class="tab-body" id="top-of-mind-body">
+            <div id="top-of-mind" class="panel-body muted">Loading…</div>
+          </div>
+        </section>
 
-      <section class="panel">
-        <h2>🔥 Top of Mind</h2>
-        <div id="top-of-mind" class="panel-body muted">Loading…</div>
-      </section>
+        <section class="panel">
+          <button class="tab-header" data-target="session-body">
+            <span>Last Pipeline Run</span>
+            <span class="chevron">▸</span>
+          </button>
+          <div class="tab-body" id="session-body">
+            <div id="session-info" class="panel-body muted">Loading…</div>
+          </div>
+        </section>
 
-      <section class="panel">
-        <h2>Last Pipeline Run</h2>
-        <div id="session-info" class="panel-body muted">Loading…</div>
-      </section>
+        <section class="panel">
+          <button class="tab-header" data-target="reports-body">
+            <span>Reports</span>
+            <span class="chevron">▸</span>
+          </button>
+          <div class="tab-body" id="reports-body">
+            <div id="reports-list" class="panel-body muted">Loading…</div>
+          </div>
+        </section>
 
-      <section class="panel">
-        <h2>Reports</h2>
-        <div id="reports-list" class="panel-body muted">Loading…</div>
-      </section>
+        <section class="panel">
+          <button class="tab-header" data-target="chat-history-body">
+            <span>💬 Chat History</span>
+            <span class="chevron">▸</span>
+          </button>
+          <div class="tab-body" id="chat-history-body">
+            <div id="chat-history" class="panel-body muted">Loading…</div>
+          </div>
+        </section>
+      </div>
 
       <button id="end-session-btn" class="secondary-btn">End session &amp; save</button>
     </aside>
+
+    <div class="resizer" id="sidebar-resizer"></div>
 
     <main class="chat">
       <div id="messages" class="messages">

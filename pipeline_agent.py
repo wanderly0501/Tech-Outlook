@@ -4,7 +4,7 @@ pipeline_agent.py
 Scheduled autonomous agent. Runs daily via scheduler.py.
 No user interaction — crawls, processes, stores, reports.
 
-Write permissions: articles.db (articles, reports), memory/session.md, memory/top_of_mind.md
+Write permissions: articles.db (articles, reports), memory/pipeline_session.md, memory/top_of_mind.md
 Read permissions:  everything
 """
 
@@ -21,7 +21,7 @@ from tools.config import PROMPTS_DIR, MEMORY_DIR
 from tools import db
 
 MEMORY_PATHS = [
-    str(MEMORY_DIR / "session.md"),
+    str(MEMORY_DIR / "pipeline_session.md"),
     str(MEMORY_DIR / "top_of_mind.md"),
 ]
 
@@ -62,11 +62,11 @@ TOOLS = [
     },
     {
         "name": "update_memory",
-        "description": "Update a memory file. Pipeline agent controls session and top_of_mind.",
+        "description": "Update a memory file. Pipeline agent controls pipeline_session and top_of_mind.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "file": {"type": "string", "enum": ["session", "top_of_mind"]},
+                "file": {"type": "string", "enum": ["pipeline_session", "top_of_mind"]},
                 "content": {"type": "string"},
                 "mode": {"type": "string", "enum": ["overwrite", "append"], "default": "overwrite"},
             },

@@ -1,1 +1,5 @@
-No highlights yet — run the pipeline agent to populate this.
+🔥 [Business] Samsung Q2 operating profit surged 19x — more than its combined earnings from the past three years — fueled by AI datacenter memory chip demand — https://www.theverge.com/business/962007/amung
+📈 [AI] AI datacenter spending is so intense it's single-handedly turning Samsung's financials around, with average employee bonuses hitting $340K — https://www.theverge.com/business/962007/amung
+⚡ [Business] Samsung's memory chip revival signals that AI infrastructure buildout is still accelerating — no slowdown in sight for hyperscaler capex — https://www.theverge.com/business/962007/amung
+💡 [AI] The AI chip boom isn't just an Nvidia story — memory makers like Samsung are seeing historic windfalls as model training and inference demand skyrocket — https://www.theverge.com/business/962007/amung
+🔬 [Business] Samsung employees are getting avg $340K bonuses — a rare sign that AI hardware profits are flowing down to workers, not just shareholders — https://www.theverge.com/business/962007/amung

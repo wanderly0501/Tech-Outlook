@@ -92,7 +92,16 @@ def _start_scheduler_loop() -> None:
         time.sleep(60)
 
 
+LOGO_PATH = PROJECT_ROOT / "logo" / "logo.png"
+ICON_PATH = PROJECT_ROOT / "logo" / "icon.ico"
+
+
 def _build_icon_image() -> Image.Image:
+    if LOGO_PATH.exists():
+        return Image.open(LOGO_PATH)
+
+    # Fallback placeholder if the logo asset isn't present, so the tray
+    # icon degrades instead of crashing the app.
     size = 64
     image = Image.new("RGB", (size, size), "#6366f1")
     draw = ImageDraw.Draw(image)
@@ -152,7 +161,10 @@ def main() -> None:
     _window = webview.create_window("Tech Lookout", URL, width=1000, height=720)
     _window.events.closing += _on_closing
 
-    webview.start()
+    # create_window() has no icon param — pywebview only sets the window/
+    # taskbar icon via start(), otherwise it falls back to python.exe's
+    # own icon (the Python logo you'd see in the top-left corner).
+    webview.start(icon=str(ICON_PATH) if ICON_PATH.exists() else None)
     icon.stop()
 
 

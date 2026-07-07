@@ -4,10 +4,10 @@
   --border: #e3e3e6;
   --text: #1a1a1a;
   --muted: #6b7280;
-  --accent: #6366f1;
+  --accent: #1b83fb;
   --accent-text: #ffffff;
   --agent-bubble: #eef0f4;
-  --user-bubble: #6366f1;
+  --user-bubble: #1b83fb;
   --user-bubble-text: #ffffff;
 }
 
@@ -18,30 +18,44 @@
     --border: #303136;
     --text: #e7e7ea;
     --muted: #9a9ba3;
-    --accent: #818cf8;
-    --accent-text: #16171a;
+    --accent: #5aa8ff;
+    --accent-text: #0b1420;
     --agent-bubble: #2a2b30;
-    --user-bubble: #4f46e5;
+    --user-bubble: #3b8eff;
     --user-bubble-text: #ffffff;
   }
 }
 
 * { box-sizing: border-box; }
 
+html, body {
+  height: 100%;
+  /* The page itself never scrolls — only .messages and .sidebar do, via
+     their own overflow-y below. Without this, the border-top a few lines
+     down pushes the page to 100vh + 1px, which triggers a full-window
+     scrollbar spanning edge to edge instead of one confined to the chat box. */
+  overflow: hidden;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
+  /* Separates the browser/native window chrome (which already shows the
+     logo as a favicon / title-bar icon) from the app content below it. */
+  border-top: 1px solid var(--border);
 }
 
 .layout {
   display: flex;
-  height: 100vh;
+  height: 100%;
 }
 
 .sidebar {
-  width: 300px;
+  width: var(--sidebar-width, 420px);
+  min-width: 260px;
+  max-width: 640px;
   flex-shrink: 0;
   background: var(--panel-bg);
   border-right: 1px solid var(--border);
@@ -52,17 +66,79 @@ body {
   gap: 1rem;
 }
 
-.sidebar h1 {
-  font-size: 1.1rem;
-  margin: 0 0 0.5rem;
+.resizer {
+  flex: 0 0 6px;
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+}
+.resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 2px;
+  background: var(--border);
+}
+.resizer:hover::after,
+.resizer.dragging::after {
+  background: var(--accent);
 }
 
-.panel h2 {
+.accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Shared text styling so tabs, "End session & save", and "Send" all read
+   as one consistent button language regardless of role/color. */
+.tab-header,
+.secondary-btn,
+.composer button {
+  font-family: inherit;
   font-size: 0.75rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted);
-  margin: 0 0 0.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tab-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  padding: 0.55rem 0.8rem;
+}
+.tab-header:hover { filter: brightness(1.08); }
+
+.tab-header .chevron {
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+.panel.open .tab-header .chevron {
+  transform: rotate(90deg);
+}
+
+.tab-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease;
+}
+.panel.open .tab-body {
+  max-height: 1400px;
+}
+
+.tab-body .panel-body {
+  padding: 0.6rem 0.15rem 0.2rem;
 }
 
 .panel-body {
@@ -84,10 +160,7 @@ body {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--muted);
-  padding: 0.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.8rem;
+  padding: 0.55rem 0.8rem;
 }
 .secondary-btn:hover { border-color: var(--accent); color: var(--accent); }
 
@@ -159,11 +232,8 @@ body {
 
 .composer button {
   padding: 0.65rem 1.2rem;
-  border-radius: 8px;
   border: none;
   background: var(--accent);
   color: var(--accent-text);
-  font-weight: 600;
-  cursor: pointer;
 }
 .composer button:disabled { opacity: 0.5; cursor: not-allowed; }

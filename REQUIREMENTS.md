@@ -23,9 +23,9 @@ agent/
 │   ├── write_report.py        # HTML/MD report + charts
 │   └── send.py                # deliver report
 ├── memory/
-│   ├── session.md             # current session context (pipeline writes)
+│   ├── pipeline_session.md    # current session context (pipeline writes)
 │   ├── preferences.md         # user topic interests (chat writes)
-│   ├── user_history.md        # rolling digest of recent sessions (chat writes)
+│   ├── chat_session.md        # rolling digest of recent sessions (chat writes)
 │   └── top_of_mind.md         # agent's daily highlights (pipeline writes)
 ├── knowledge/
 │   └── articles.db            # SQLite database
@@ -68,7 +68,7 @@ python-dotenv   # .env for API key
 3. Cluster articles into topics using TF-IDF + k-means
 4. Store articles + summaries + topics in SQLite
 5. Update `memory/top_of_mind.md` with top 5 findings
-6. Update `memory/session.md` with pipeline run summary
+6. Update `memory/pipeline_session.md` with pipeline run summary
 7. Generate daily HTML report with pie chart + highlights
 8. On Fridays: also generate weekly HTML report
 9. Send report to interface (print path + open in browser)
@@ -76,13 +76,13 @@ python-dotenv   # .env for API key
 ### Tools available
 - `crawl(site, date)` — fetch articles
 - `search_kb(query, ...)` — check for duplicates / prior context
-- `update_memory(file, content, mode)` — write session, top_of_mind
+- `update_memory(file, content, mode)` — write pipeline_session, top_of_mind
 - `write_report(content, format, report_type, date, charts)` — generate report
 - `send(target, report_path, subject, recipient)` — deliver report
 
 ### Write permissions
 - `articles.db`: articles, reports tables
-- `memory/session.md`
+- `memory/pipeline_session.md`
 - `memory/top_of_mind.md`
 
 ---
@@ -109,7 +109,7 @@ python-dotenv   # .env for API key
 ### Write permissions
 - `articles.db`: conversations table only
 - `memory/preferences.md`
-- `memory/user_history.md`
+- `memory/chat_session.md`
 
 ---
 
@@ -160,7 +160,7 @@ CREATE VIRTUAL TABLE conversations_fts USING fts5(
 
 ## Memory Files
 
-### memory/session.md
+### memory/pipeline_session.md
 Written by pipeline agent after each run.
 ```
 Last run: 2026-07-05 08:03
@@ -177,7 +177,7 @@ Preferred report format: HTML with charts
 Prefers summaries over full article text
 ```
 
-### memory/user_history.md
+### memory/chat_session.md
 Written by chat agent at the end of each session. A rolling summary of recent conversations — not the full log (that's in SQLite), but a human-readable digest of what was discussed, what the user seemed interested in, and any open threads. Kept to the last 7 sessions max.
 ```
 ## 2026-07-05
@@ -287,7 +287,7 @@ Implementation: use DuckDuckGo HTML search (no API key needed) or SerpAPI if key
 ### update_memory(file, content, mode) → dict
 ```python
 # Input
-file:    "session" | "top_of_mind" | "preferences"
+file:    "pipeline_session" | "top_of_mind" | "preferences" | "chat_session"
 content: str
 mode:    "overwrite" | "append"   # default: "overwrite"
 

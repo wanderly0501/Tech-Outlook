@@ -18,6 +18,23 @@ python desktop/app.py
 A native window opens with the same chat UI as `webui/`, and a tray icon
 appears in the system tray.
 
+## Desktop Shortcut (Windows)
+
+To launch it like a normal app instead of from a terminal, create a Desktop
+shortcut (uses `pythonw.exe`, so no console window, and it uses
+`logo/icon.ico` as its icon):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File desktop/create_shortcut.ps1
+```
+
+This drops a "Tech Lookout" shortcut on your Desktop. Double-click it to
+launch — no terminal needed at all, so there's nothing to accidentally
+close that would kill the app. Re-run the script any time you move the
+project (it recomputes all paths from its own location). To also add it to
+the Start Menu, copy the resulting `.lnk` file into
+`%APPDATA%\Microsoft\Windows\Start Menu\Programs`.
+
 ## What it does
 
 - **Chat window** — the existing Flask chat app (`webui/app.py`), rendered

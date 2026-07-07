@@ -104,9 +104,11 @@ class WebCrawler:
     plugin uses to (a) recognize which discovered URLs are actual
     articles (as opposed to nav/listing/tag pages) and (b) read the
     publish date back out of a fetched page's HTML. When `filter_date`
-    is set, both hooks must be provided: pages older than filter_date
+    is set, both hooks must be provided: only articles published on
+    exactly that date are collected, and pages older than filter_date
     stop that branch of the crawl (articles are listed newest-first,
-    so this is a safe way to bound the crawl to "today").
+    so this safely bounds the crawl without also sweeping up next-day
+    articles that happen to already be live when the crawl runs).
     """
 
     def __init__(
@@ -209,6 +211,14 @@ class WebCrawler:
                 return
             try:
                 self._process_task(task)
+            except Exception as e:
+                # Without this, any uncaught exception here (e.g. a
+                # site-specific date_extractor/is_article_url choking on
+                # an unusual page) silently kills this worker thread for
+                # good, with no error surfaced — a crawl can "succeed"
+                # while quietly losing most of its parallelism partway
+                # through and returning a fraction of the real results.
+                print(f"[crawler] worker error on {task.url}: {e}", flush=True)
             finally:
                 self.tasks.task_done()
 
@@ -225,10 +235,10 @@ class WebCrawler:
         if self.filter_date is not None:
             if result.html_content and self.is_article_url(result.url):
                 article_date = self.date_extractor(result.html_content)
-                if article_date and article_date >= self.filter_date:
+                if article_date == self.filter_date:
                     with self.results_lock:
                         self.results.append(result)
-                if article_date and article_date < self.filter_date:
+                if article_date is not None and article_date < self.filter_date:
                     return
         else:
             with self.results_lock:

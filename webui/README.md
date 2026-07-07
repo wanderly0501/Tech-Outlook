@@ -22,7 +22,7 @@ Then open http://127.0.0.1:5000
 - Chat pane talks to the same agent loop and tools as `python chat_agent.py`
   (one shared conversation at a time, matching the terminal REPL's model).
 - Sidebar shows `top_of_mind.md`, the last pipeline run summary
-  (`session.md`), and links to generated reports in `reports/`.
+  (`pipeline_session.md`), and links to generated reports in `reports/`.
 - "End session & save" writes the conversation to the `conversations` table
   (same as quitting the terminal REPL) and starts a fresh conversation.
 

@@ -18,16 +18,21 @@ PROMPTS_DIR = PROJECT_ROOT / "prompts"
 
 DB_PATH = KNOWLEDGE_DIR / "articles.db"
 
+# Cap on rows in the articles table. Enforced in tools/db.py by deleting
+# the oldest rows (by crawled_at) once this is exceeded, so the KB can't
+# grow unbounded from years of daily crawls.
+MAX_ARTICLES = 20000
+
 MEMORY_DIR.mkdir(parents=True, exist_ok=True)
 KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
 REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 
-MEMORY_FILES = {"session", "top_of_mind", "preferences", "user_history"}
+MEMORY_FILES = {"pipeline_session", "top_of_mind", "preferences", "chat_session"}
 
 # Which agent is allowed to write which memory files. Enforced in
 # tools/update_memory.py in addition to the tool-schema enum restriction
 # each agent declares, per REQUIREMENTS.md.
 MEMORY_WRITE_PERMISSIONS = {
-    "pipeline": {"session", "top_of_mind"},
-    "chat": {"preferences", "user_history"},
+    "pipeline": {"pipeline_session", "top_of_mind"},
+    "chat": {"preferences", "chat_session"},
 }

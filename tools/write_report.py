@@ -61,16 +61,22 @@ def _render_html(content: str, report_type: str, date: str, charts: list[dict]) 
 <head>
   <meta charset="utf-8">
   <title>{report_type.title()} Report — {date}</title>
+  <link rel="icon" type="image/png" href="../logo/logo.png">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {{ font-family: -apple-system, Segoe UI, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #1a1a1a; }}
     .chart-block {{ max-width: 480px; margin: 1.5rem 0; }}
+    .title-row {{ display: flex; align-items: center; gap: 0.6rem; }}
+    .title-row img {{ width: 32px; height: 32px; object-fit: contain; }}
     h1 {{ margin-bottom: 0.25rem; }}
     .meta {{ color: #666; margin-bottom: 1.5rem; }}
   </style>
 </head>
 <body>
-  <h1>{report_type.title()} Report</h1>
+  <div class="title-row">
+    <img src="../logo/logo.png" alt="">
+    <h1>{report_type.title()} Report</h1>
+  </div>
   <div class="meta">{date}</div>
   {charts_html}
   {body_html}

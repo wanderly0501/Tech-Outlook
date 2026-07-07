@@ -4,7 +4,7 @@ chat_agent.py
 Always-on interactive agent. User talks to it; it answers from
 the local knowledge base, optionally doing web search for deep dives.
 
-Write permissions: conversations table, memory/preferences.md, memory/user_history.md
+Write permissions: conversations table, memory/preferences.md, memory/chat_session.md
 Read permissions:  articles.db (all tables), all memory/*.md files
 """
 
@@ -22,9 +22,9 @@ from tools.config import PROMPTS_DIR, MEMORY_DIR
 from tools import db
 
 MEMORY_PATHS = [
-    str(MEMORY_DIR / "session.md"),
+    str(MEMORY_DIR / "pipeline_session.md"),
     str(MEMORY_DIR / "preferences.md"),
-    str(MEMORY_DIR / "user_history.md"),
+    str(MEMORY_DIR / "chat_session.md"),
     str(MEMORY_DIR / "top_of_mind.md"),
 ]
 
@@ -66,6 +66,23 @@ TOOLS = [
         },
     },
     {
+        "name": "list_reports",
+        "description": (
+            "List generated reports (daily/weekly), most recent first. Reads "
+            "live from the DB — call this whenever the user asks about "
+            "reports (latest, past, or by type) instead of relying on the "
+            "report path in memory, which can go stale."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "default": 10},
+                "report_type": {"type": "string", "enum": ["daily", "weekly"], "description": "Optional filter"},
+            },
+            "required": [],
+        },
+    },
+    {
         "name": "web_search",
         "description": "Search the web for current information beyond the knowledge base.",
         "input_schema": {
@@ -79,11 +96,11 @@ TOOLS = [
     },
     {
         "name": "update_memory",
-        "description": "Update a memory file. Chat agent controls preferences and user_history.",
+        "description": "Update a memory file. Chat agent controls preferences and chat_session.",
         "input_schema": {
             "type": "object",
             "properties": {
-                "file": {"type": "string", "enum": ["preferences", "user_history"]},
+                "file": {"type": "string", "enum": ["preferences", "chat_session"]},
                 "content": {"type": "string", "description": "Full new content"},
                 "mode": {"type": "string", "enum": ["overwrite", "append"], "default": "overwrite"},
             },
@@ -96,12 +113,14 @@ TOOLS = [
 def dispatch(tool_name: str, tool_input: dict) -> dict:
     from tools.search_kb import search_kb
     from tools.search_history import search_history
+    from tools.list_reports import list_reports
     from tools.web_search import web_search
     from tools.update_memory import update_memory
 
     handlers = {
         "search_kb": search_kb,
         "search_history": search_history,
+        "list_reports": list_reports,
         "web_search": web_search,
         "update_memory": lambda **kw: update_memory(caller="chat", **kw),
     }
@@ -141,6 +160,33 @@ def _summarize_session(messages: list[dict]) -> str:
         messages=[{"role": "user", "content": transcript[:12000]}],
     )
     return "".join(b.text for b in response.content if b.type == "text").strip()
+
+
+_CLOSING_PROMPT = (
+    "The user is ending this session now. Before anything else, make any "
+    "final memory updates this conversation calls for — call update_memory "
+    "for preferences.md and/or chat_session.md per your instructions, "
+    "merging with what's already there. Then say a brief goodbye."
+)
+
+
+def close_session(messages: list[dict], system_prompt: str) -> None:
+    """
+    Give Claude one last turn to act on chat_agent.md's end-of-session
+    memory-write instructions before the conversation is saved. Without
+    this, "the user quits" never actually reaches Claude as a turn, so
+    update_memory never gets called and preferences.md/chat_session.md
+    stay stale forever.
+    """
+    if not messages:
+        return
+    messages.append({"role": "user", "content": _CLOSING_PROMPT})
+    run_agent_loop(
+        messages=messages,
+        system_prompt=system_prompt,
+        tools=TOOLS,
+        dispatch=dispatch,
+    )
 
 
 def save_conversation(messages: list[dict], started_at: str):
@@ -192,6 +238,7 @@ def main():
         print()
 
     if messages:
+        close_session(messages, system_prompt)
         save_conversation(messages, started_at)
         print("[session saved]")
 

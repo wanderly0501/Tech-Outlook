@@ -4,7 +4,32 @@ tools/search_kb.py
 SQLite FTS5 search over the local article knowledge base.
 """
 
+import re
+
 from tools import db
+
+# FTS5's default MATCH is an implicit AND over every bareword, with no
+# stemming — a natural-language question like "what did you find about
+# GTA 6 preorders" almost never matches a stored title/summary verbatim,
+# even when a clearly relevant article exists. _build_fts_query rewrites
+# the raw query into an OR-of-terms prefix search instead, trading a
+# little precision for much better recall on conversational input; bm25
+# ranking still puts the closest match first.
+_STOPWORDS = {
+    "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
+    "do", "does", "did", "have", "has", "had", "i", "you", "your", "me",
+    "my", "it", "its", "this", "that", "what", "when", "where", "who",
+    "which", "how", "why", "and", "or", "of", "in", "on", "for", "to",
+    "from", "about", "with", "as", "at", "by", "any", "some", "there",
+}
+
+
+def _build_fts_query(raw_query: str) -> str:
+    tokens = re.findall(r"\w+", raw_query.lower())
+    terms = [t for t in tokens if t not in _STOPWORDS] or tokens
+    if not terms:
+        return '""'  # empty/whitespace-only query — match nothing
+    return " OR ".join(f'"{t}"*' if len(t) >= 4 else f'"{t}"' for t in terms)
 
 
 def _row_to_dict(row) -> dict:
@@ -68,7 +93,7 @@ def search_kb(
                 ORDER BY score
                 LIMIT ?
             """
-            rows = conn.execute(sql, (query, limit)).fetchall()
+            rows = conn.execute(sql, (_build_fts_query(query), limit)).fetchall()
 
         return [_row_to_dict(row) for row in rows]
     finally:

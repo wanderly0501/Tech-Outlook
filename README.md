@@ -1,8 +1,7 @@
 # Tech Lookout
 
 A local Python agent system that crawls tech news daily, maintains a knowledge
-base, generates reports, and lets you chat with it about tech trends — all
-without hitting the internet during chat.
+base, generates reports, and lets you chat with it about tech trends.
 
 Two agents, two processes, zero shared state conflicts. Full spec in
 [REQUIREMENTS.md](REQUIREMENTS.md); this file is the practical "what is this
@@ -23,7 +22,7 @@ clusters, stores, and reports autonomously.
 4. Store each article's summary (under 100 words) + topic in SQLite — the
    full article text is discarded once it's been summarized
 5. Pick the day's 5 most interesting findings into `memory/top_of_mind.md`
-6. Write a run summary to `memory/session.md`
+6. Write a run summary to `memory/pipeline_session.md`
 7. Generate a daily HTML report (topic pie chart + highlights); weekly too on Fridays
 8. Surface the report (open locally, and/or email)
 
@@ -39,7 +38,9 @@ agent loop and tools:
   `chat_agent.py` building blocks (see [webui/README.md](webui/README.md))
 - **Desktop app** — `python desktop/app.py`, a system-tray app that hosts the
   web UI in a native window and also runs the daily pipeline in the
-  background, so no separate `scheduler.py` process is needed (see
+  background, so no separate `scheduler.py` process is needed. Run
+  `desktop/create_shortcut.ps1` once to get a double-click Desktop shortcut
+  instead of launching it from a terminal (see
   [desktop/README.md](desktop/README.md))
 
 ---
@@ -65,10 +66,10 @@ tools/
   write_report.py           # HTML (inline Chart.js) / Markdown report rendering
   send.py                    # opens report locally and/or emails it
 memory/
-  session.md               # pipeline: last run stats
+  pipeline_session.md      # pipeline: last run stats
   top_of_mind.md            # pipeline: interesting things/trends found recently
   preferences.md            # chat: learned user interests
-  user_history.md            # chat: rolling digest of recent sessions (last 7)
+  chat_session.md            # chat: rolling digest of recent sessions (last 7)
 knowledge/
   articles.db               # SQLite DB (article summaries, reports, conversations + FTS5) — no full article text
 reports/                    # generated HTML/MD reports
@@ -148,7 +149,7 @@ to set up by hand beyond the `.env`.
 - **Read permissions are open, write permissions are enforced.** Both agents
   can read the whole DB and all memory files, but `update_memory` checks a
   `caller` argument against `tools/config.py`'s permission table (pipeline:
-  `session`, `top_of_mind`; chat: `preferences`, `user_history`) in addition
+  `pipeline_session`, `top_of_mind`; chat: `preferences`, `chat_session`) in addition
   to each agent's own tool-schema enum restricting which files it can even
   ask to write.
 - **Crawl does the mechanical ETL in one call.** Summarizing and clustering
