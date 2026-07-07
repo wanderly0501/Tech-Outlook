@@ -1,0 +1,8 @@
+anthropic
+requests
+beautifulsoup4
+scikit-learn
+schedule
+rich
+python-dotenv
+markdown

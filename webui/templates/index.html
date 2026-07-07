@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tech Lookout</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Tech Lookout</h1>
+
+      <section class="panel">
+        <h2>🔥 Top of Mind</h2>
+        <div id="top-of-mind" class="panel-body muted">Loading…</div>
+      </section>
+
+      <section class="panel">
+        <h2>Last Pipeline Run</h2>
+        <div id="session-info" class="panel-body muted">Loading…</div>
+      </section>
+
+      <section class="panel">
+        <h2>Reports</h2>
+        <div id="reports-list" class="panel-body muted">Loading…</div>
+      </section>
+
+      <button id="end-session-btn" class="secondary-btn">End session &amp; save</button>
+    </aside>
+
+    <main class="chat">
+      <div id="messages" class="messages">
+        <div class="msg agent">
+          <div class="bubble">Hi — ask me about recent tech news. I'll search the local knowledge base first.</div>
+        </div>
+      </div>
+
+      <form id="chat-form" class="composer">
+        <input id="chat-input" type="text" autocomplete="off" placeholder="Ask about tech news…" />
+        <button type="submit">Send</button>
+      </form>
+    </main>
+  </div>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
