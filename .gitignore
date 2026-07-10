@@ -6,3 +6,7 @@ knowledge/articles.db
 reports/*.html
 reports/*.md
 !reports/.gitkeep
+
+# Ad-hoc Windows screenshots dropped at the project root (not the ones
+# intentionally placed in assets/ for README.md)
+Screenshot*.png

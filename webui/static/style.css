@@ -171,6 +171,62 @@ body {
   min-width: 0;
 }
 
+.view-tabs {
+  display: flex;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  flex-shrink: 0;
+}
+
+.view-tab {
+  padding: 0.55rem 0.2rem;
+  margin-bottom: -1px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.view-tab:hover { color: var(--text); }
+.view-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.view {
+  display: none;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+.view.active { display: flex; }
+
+.report-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.report-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  display: none;
+  background: #ffffff;
+}
+
 .messages {
   flex: 1;
   overflow-y: auto;

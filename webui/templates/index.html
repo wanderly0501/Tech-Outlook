@@ -58,16 +58,28 @@
     <div class="resizer" id="sidebar-resizer"></div>
 
     <main class="chat">
-      <div id="messages" class="messages">
-        <div class="msg agent">
-          <div class="bubble">Hi — ask me about recent tech news. I'll search the local knowledge base first.</div>
-        </div>
+      <div class="view-tabs">
+        <button class="view-tab active" data-view="chat-view">Chat</button>
+        <button class="view-tab" data-view="report-view">Report</button>
       </div>
 
-      <form id="chat-form" class="composer">
-        <input id="chat-input" type="text" autocomplete="off" placeholder="Ask about tech news…" />
-        <button type="submit">Send</button>
-      </form>
+      <div id="chat-view" class="view active">
+        <div id="messages" class="messages">
+          <div class="msg agent">
+            <div class="bubble">Hi — ask me about recent tech news. I'll search the local knowledge base first.</div>
+          </div>
+        </div>
+
+        <form id="chat-form" class="composer">
+          <input id="chat-input" type="text" autocomplete="off" placeholder="Ask about tech news…" />
+          <button type="submit">Send</button>
+        </form>
+      </div>
+
+      <div id="report-view" class="view">
+        <div id="report-placeholder" class="report-placeholder">Select a report from the sidebar to view it here.</div>
+        <iframe id="report-frame" class="report-frame"></iframe>
+      </div>
     </main>
   </div>
 

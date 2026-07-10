@@ -1,10 +1,10 @@
-# Pipeline Run — 2026-07-06
+# Pipeline Run — 2026-07-08
 
-- **Date**: 2026-07-06
+- **Date**: 2026-07-08
 - **Site**: The Verge
-- **Articles crawled**: 1
-- **New articles stored**: 1 (0 duplicates skipped)
-- **Topics found**: Business / AI Hardware (1)
-- **Report path**: C:\Users\wande\Documents\projects\crawl-agent\reports\2026-07-06-daily.html
-- **Errors**: None
-- **Notes**: Very light news day — only 1 article returned by crawler. The sole story was Samsung's historic Q2 profit surge (19x YoY) driven by AI memory chip demand, with eligible employees averaging $340K bonuses. Top_of_mind entries were all derived from this single article.
+- **Articles crawled**: 46
+- **New articles stored**: 46 (0 duplicates skipped)
+- **Topics found**: AI & Machine Learning (6), Gaming & Xbox (7), Transportation & AVs (3), Hardware & Gadgets (8), Policy & Privacy & Regulation (3), Apps & Other Tech (5) + misc shorts (14)
+- **Report path**: C:\Users\wande\Documents\projects\crawl-agent\reports\2026-07-08-daily.html
+- **Errors**: write_report() failed on first attempt (missing 'content' argument); resolved on second call with full content supplied.
+- **Top stories**: Meta stealth-recording smart glasses (LED off), Xbox/Obsidian pivoted to Fallout (New Vegas director leads), NJ bill would ban Tesla Robotaxi via lidar/radar mandate, GPT-Live-1 full-duplex voice mode launch, PC shipments first drop in 2+ years due to RAMageddon, Waymo expands to 4 new cities, cheaper Vision Pro likely dead, Samsung Unpacked July 22 (new wide foldable), NHTSA warns AV makers over emergency responder incidents.

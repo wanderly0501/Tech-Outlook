@@ -91,6 +91,20 @@ async function loadMemory(name, elementId, emptyText) {
   }
 }
 
+function switchView(viewId) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.toggle("active", v.id === viewId));
+  document.querySelectorAll(".view-tab").forEach((t) => t.classList.toggle("active", t.dataset.view === viewId));
+}
+
+function openReport(name) {
+  const frame = document.getElementById("report-frame");
+  const placeholder = document.getElementById("report-placeholder");
+  frame.src = `/reports/${name}`;
+  frame.style.display = "block";
+  placeholder.style.display = "none";
+  switchView("report-view");
+}
+
 async function loadReports() {
   const el = document.getElementById("reports-list");
   try {
@@ -103,10 +117,13 @@ async function loadReports() {
     el.innerHTML = "";
     for (const name of data.reports) {
       const link = document.createElement("a");
-      link.href = `/reports/${name}`;
-      link.target = "_blank";
+      link.href = "#";
       link.textContent = name;
       link.style.display = "block";
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        openReport(name);
+      });
       el.appendChild(link);
     }
   } catch (err) {
@@ -119,6 +136,11 @@ loadMemory("pipeline_session", "session-info", "No pipeline runs yet.");
 loadMemory("chat_session", "chat-history", "No past sessions yet.");
 loadReports();
 inputEl.focus();
+
+// --- Chat / Report view tabs ------------------------------------------------
+document.querySelectorAll(".view-tab").forEach((tab) => {
+  tab.addEventListener("click", () => switchView(tab.dataset.view));
+});
 
 // --- Foldable sidebar tabs -------------------------------------------------
 document.querySelectorAll(".tab-header").forEach((header) => {

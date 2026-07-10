@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo/logo.png" alt="Tech Lookout logo" width="120">
+</p>
+
 # Tech Lookout
 
 A local Python agent system that crawls tech news daily, maintains a knowledge
@@ -6,6 +10,19 @@ base, generates reports, and lets you chat with it about tech trends.
 Two agents, two processes, zero shared state conflicts. Full spec in
 [REQUIREMENTS.md](REQUIREMENTS.md); this file is the practical "what is this
 and how do I run it" overview.
+
+---
+
+## Motivation
+
+The LLM is powerful, but sometimes insensitive to what's happening recently.
+For example, given the big news about Microsoft's Xbox layoffs, when I ask
+ChatGPT a general query "Microsoft Xbox," it doesn't mention recent news, but
+only gives a general introduction of Xbox.
+
+For the LLM to provide up-to-date knowledge, and also to alleviate the
+cognitive overload of tech news while still surfacing the most important
+updates, this agent system was developed.
 
 ---
 
@@ -42,6 +59,21 @@ agent loop and tools:
   `desktop/create_shortcut.ps1` once to get a double-click Desktop shortcut
   instead of launching it from a terminal (see
   [desktop/README.md](desktop/README.md))
+
+---
+
+## Screenshots
+
+The desktop app's Chat tab — sidebar with Top of Mind, Last Pipeline Run,
+Reports, and Chat History, all foldable and answering from the local
+knowledge base:
+
+![Chat tab](assets/chat.png)
+
+The Report tab — generated daily reports (topic pie chart, category
+breakdown, and narrative digest) open inline instead of a new window:
+
+![Report tab](assets/report.png)
 
 ---
 

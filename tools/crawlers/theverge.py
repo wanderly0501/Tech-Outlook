@@ -77,7 +77,7 @@ def extract_content(html_content: str) -> dict:
     return {"title": title, "content": content}
 
 
-def crawl(target_date: date, max_num: int = 500) -> list[dict]:
+def crawl(target_date: date, max_num: int = 2000) -> list[dict]:
     """Crawl The Verge for articles published on target_date specifically."""
     crawler = WebCrawler(
         start_urls=START_URLS,

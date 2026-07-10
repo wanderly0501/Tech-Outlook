@@ -121,7 +121,7 @@ class WebCrawler:
         max_retry: int = 2,
         request_timeout: float = 10.0,
         user_agent: str = "crawler/1.0",
-        max_num: int = 500,
+        max_num: int = 2000,
         filter_date: Optional[date] = None,
         is_article_url: Optional[Callable[[str], bool]] = None,
         date_extractor: Optional[Callable[[str], Optional[date]]] = None,
