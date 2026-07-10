@@ -30,10 +30,14 @@ Runs once a day (or on demand). No user present — it crawls, summarizes,
 clusters, stores, and reports autonomously.
 
 1. Crawl the configured site for new articles (dedup against the DB)
-2. Summarize each new article via Claude
-3. Cluster into topics (TF-IDF + k-means, labeled against a fixed vocabulary)
-4. Store each article's summary (under 100 words) + topic in SQLite — the
-   full article text is discarded once it's been summarized
+2. Summarize each new article via Claude, extracting up to 10 keywords from
+   its own content in the same call (independent per article — no
+   cross-article coordination)
+3. Cluster the batch into topics (TF-IDF + k-means, up to 10 clusters), each
+   labeled from the pooled keywords of its members rather than a fixed
+   vocabulary
+4. Store each article's summary (under 100 words) + keywords + topic in
+   SQLite — the full article text is discarded once it's been summarized
 5. Pick the day's 5 most interesting findings into `memory/top_of_mind.md`
 6. Write a run summary to `memory/pipeline_session.md`
 7. Generate a daily HTML report (topic pie chart + highlights); weekly too on Fridays
@@ -81,12 +85,12 @@ core/
 tools/
   db.py                   # SQLite schema + connection + insert/query helpers
   config.py               # shared paths, memory write-permission table
-  crawler.py              # crawl(site, date) tool: dedupe -> summarize -> cluster -> store
+  crawler.py              # crawl(site, date) tool: dedupe -> summarize+keywords -> cluster -> store
   crawlers/
     base_crawler.py        # generic threaded BFS crawler (site-agnostic)
     theverge.py             # The Verge plugin: date/content extraction, article-URL matching
-  summarize.py            # Claude call to summarize one article
-  topics.py                # TF-IDF + k-means clustering, keyword-based topic labeling
+  summarize.py            # Claude call: summary + per-article keywords (independent, no shared state)
+  topics.py                # TF-IDF + k-means clustering, labeled from pooled per-article keywords
   search_kb.py             # SQLite FTS5 search over articles
   search_history.py        # SQLite FTS5 search over past conversations
   web_search.py             # DuckDuckGo (or SerpAPI) on-demand web search
@@ -134,7 +138,7 @@ pipeline agent or its tool schema:
 3. Add the new site key to the `"site"` enum in the `crawl` tool schema in
    `pipeline_agent.py`.
 
-`tools/crawler.py` (dedup, summarize, cluster, store) and everything
+`tools/crawler.py` (dedup, summarize, keyword-tag, cluster, store) and everything
 downstream needs no changes.
 
 ---
@@ -180,18 +184,31 @@ to set up by hand beyond the `.env`.
   `pipeline_session`, `top_of_mind`; chat: `preferences`, `chat_session`) in addition
   to each agent's own tool-schema enum restricting which files it can even
   ask to write.
-- **Crawl does the mechanical ETL in one call.** Summarizing and clustering
-  aren't judgment calls, so `crawl()` handles fetch → dedupe → summarize →
-  cluster → store internally and returns already-processed articles. The
-  agent loop is reserved for steps that need Claude's judgment: picking
-  top-of-mind highlights and writing the report narrative.
+- **Crawl does the mechanical ETL in one call.** Summarizing, keyword-tagging,
+  and clustering aren't judgment calls, so `crawl()` handles fetch → dedupe →
+  summarize+keywords → cluster → store internally and returns
+  already-processed articles. The agent loop is reserved for steps that need
+  Claude's judgment: picking top-of-mind highlights and writing the report
+  narrative.
 - **Only the summary is kept, not the article body.** `crawl()` fetches full
   article text just long enough to generate an under-100-word summary, then
   discards it (`tools/crawler.py`) — the DB has no `content` column. The KB
   is for search and recall, not for mirroring the source site.
+- **Keywords and topic are two independent, complementary fields.**
+  `tools/summarize.py` extracts each article's keywords (≤10) from its own
+  content alone, in the same Claude call as the summary — no cross-article
+  state, so a document's keywords never depend on crawl order or batch
+  composition. `tools/topics.py` then clusters the whole batch (TF-IDF +
+  k-means, ≤10 clusters) and labels each cluster from the *pooled* keywords
+  of its members, rather than matching against a fixed vocabulary — this
+  replaced an earlier fixed 6-category heuristic that tended to over-label
+  everything "AI". `search_kb` exposes both as separate filters:
+  `mode="topic"` (exact match on the cluster label) and `mode="keyword"`
+  (substring match on the per-article list).
 - **Topic clustering degrades gracefully.** If scikit-learn's compiled
   clustering extension can't load in a given environment, topic assignment
-  falls back to keyword-only labeling instead of failing the crawl step.
+  falls back to per-article keyword-based labeling instead of failing the
+  crawl step.
 - **The web UI is a pure add-on.** `webui/app.py` imports `chat_agent.py`'s
   module-level `TOOLS`, `dispatch`, prompt, and `save_conversation` rather
   than reimplementing them, so the REPL and the web UI can never drift apart.

@@ -31,7 +31,7 @@ TOOLS = [
     {
         "name": "crawl",
         "description": (
-            "Fetch, summarize, topic-cluster, and store today's new articles "
+            "Fetch, summarize, keyword-tag, topic-cluster, and store today's new articles "
             "from a tech website. Returns the newly ingested articles "
             "(already deduplicated against the knowledge base)."
         ),
@@ -51,8 +51,13 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string"},
-                "mode": {"type": "string", "enum": ["text", "topic", "date"]},
-                "topic": {"type": "string"},
+                "mode": {
+                    "type": "string",
+                    "enum": ["text", "topic", "keyword", "date"],
+                    "description": "Prefer keyword over topic: topic requires an exact match against a dynamically-generated cluster label, while keyword does a forgiving substring match against per-article terms.",
+                },
+                "topic": {"type": "string", "description": "Exact match, must match a real cluster label"},
+                "keyword": {"type": "string", "description": "Substring match, preferred over topic"},
                 "date_from": {"type": "string"},
                 "date_to": {"type": "string"},
                 "limit": {"type": "integer", "default": 10},

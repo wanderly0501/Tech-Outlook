@@ -1,12 +1,22 @@
 """
 tools/topics.py
 
-Deterministic topic assignment: TF-IDF + k-means groups articles into
-clusters, then each cluster is labeled against a fixed vocabulary
-(AI, Hardware, Policy, Apps, Science, Other) by keyword overlap.
-Clustering decides *grouping*, the keyword pass decides the *name* —
-kept out of the LLM's hands so labels stay stable run to run.
+Groups a batch of newly-crawled articles into topic clusters (TF-IDF +
+k-means, same as before) — but labels each cluster from the per-article
+keywords already extracted during summarization (tools/summarize.py),
+instead of matching against a fixed vocabulary. Clustering decides the
+*grouping*; the pooled keywords of each cluster's members decide the
+*name*. This replaces the old fixed 6-category keyword-heuristic
+labeling, which tended to over-label everything "AI" once a cluster had
+even a couple of AI-adjacent articles pulling in unrelated ones.
+
+Keyword extraction itself (tools/summarize.py) stays fully independent
+of this — it runs once per article with no awareness of clustering or
+other articles. This module only consumes those already-assigned
+keywords as input for cluster naming.
 """
+
+from collections import Counter
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -19,63 +29,46 @@ except ImportError:
     # keyword-only labeling rather than failing the whole crawl step.
     KMeans = None
 
-CATEGORIES = ["AI", "Hardware", "Policy", "Apps", "Science", "Other"]
-
-_CATEGORY_KEYWORDS = {
-    "AI": ["ai", "artificial intelligence", "machine learning", "llm", "chatbot",
-           "openai", "anthropic", "claude", "gpt", "model", "neural", "agent"],
-    "Hardware": ["chip", "processor", "device", "phone", "laptop", "hardware",
-                 "silicon", "gadget", "camera", "battery", "smartphone", "semiconductor"],
-    "Policy": ["regulation", "law", "policy", "congress", "government", "antitrust",
-               "lawsuit", "senate", "ban", "court", "fcc", "ftc", "privacy", "compliance"],
-    "Apps": ["app", "software", "update", "feature", "ios", "android",
-             "browser", "platform", "subscription"],
-    "Science": ["science", "space", "nasa", "climate", "research", "study",
-                "physics", "biology", "energy", "quantum"],
-}
+MAX_TOPICS = 10
 
 
-def _label_by_keywords(text: str) -> str:
-    text_lower = text.lower()
-    best_category = "Other"
-    best_count = 0
-    for category, keywords in _CATEGORY_KEYWORDS.items():
-        count = sum(text_lower.count(kw) for kw in keywords)
-        if count > best_count:
-            best_count = count
-            best_category = category
-    return best_category
+def _label_from_keywords(keyword_lists: list[list[str]]) -> str:
+    """Pool a cluster's members' keywords and name it after the top 1-2."""
+    counter = Counter()
+    for keywords in keyword_lists:
+        counter.update(keywords)
+    if not counter:
+        return "Other"
+    top_terms = [term for term, _ in counter.most_common(2)]
+    return " / ".join(term.title() for term in top_terms)
 
 
-def assign_topics(articles: list[dict]) -> None:
+def cluster_topics(articles: list[dict]) -> None:
     """Mutates each article dict in place, setting article['topic']."""
     if not articles:
         return
 
-    texts = [f"{a.get('title', '')} {a.get('summary') or ''}" for a in articles]
-
     if len(articles) < 3 or KMeans is None:
-        for article, text in zip(articles, texts):
-            article["topic"] = _label_by_keywords(text)
+        for article in articles:
+            article["topic"] = _label_from_keywords([article.get("keywords") or []])
         return
+
+    texts = [f"{a.get('title', '')} {a.get('summary') or ''}" for a in articles]
 
     vectorizer = TfidfVectorizer(stop_words="english", max_features=2000)
     matrix = vectorizer.fit_transform(texts)
 
-    num_clusters = max(2, min(7, len(articles) // 2))
+    num_clusters = max(2, min(MAX_TOPICS, len(articles) // 2))
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42)
     cluster_ids = kmeans.fit_predict(matrix)
 
-    # Label each cluster once by pooling its articles' text, then apply
-    # that label to every member — cheaper and more stable than labeling
-    # per-article, and keeps semantically similar articles grouped together.
-    cluster_text = {}
-    for cluster_id, text in zip(cluster_ids, texts):
-        cluster_text.setdefault(cluster_id, []).append(text)
+    cluster_keywords: dict[int, list[list[str]]] = {}
+    for cluster_id, article in zip(cluster_ids, articles):
+        cluster_keywords.setdefault(cluster_id, []).append(article.get("keywords") or [])
 
     cluster_labels = {
-        cluster_id: _label_by_keywords(" ".join(texts))
-        for cluster_id, texts in cluster_text.items()
+        cluster_id: _label_from_keywords(keyword_lists)
+        for cluster_id, keyword_lists in cluster_keywords.items()
     }
 
     for article, cluster_id in zip(articles, cluster_ids):

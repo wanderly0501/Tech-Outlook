@@ -22,30 +22,31 @@ CREATE TABLE IF NOT EXISTS articles (
     crawled_at    TEXT,
     site          TEXT,
     topic         TEXT,
+    keywords      TEXT,
     summary       TEXT,
     embedding     TEXT
 );
 
 CREATE VIRTUAL TABLE IF NOT EXISTS articles_fts USING fts5(
-    title, summary,
+    title, summary, keywords,
     content='articles', content_rowid='id'
 );
 
 CREATE TRIGGER IF NOT EXISTS articles_ai AFTER INSERT ON articles BEGIN
-    INSERT INTO articles_fts(rowid, title, summary)
-    VALUES (new.id, new.title, new.summary);
+    INSERT INTO articles_fts(rowid, title, summary, keywords)
+    VALUES (new.id, new.title, new.summary, new.keywords);
 END;
 
 CREATE TRIGGER IF NOT EXISTS articles_ad AFTER DELETE ON articles BEGIN
-    INSERT INTO articles_fts(articles_fts, rowid, title, summary)
-    VALUES ('delete', old.id, old.title, old.summary);
+    INSERT INTO articles_fts(articles_fts, rowid, title, summary, keywords)
+    VALUES ('delete', old.id, old.title, old.summary, old.keywords);
 END;
 
 CREATE TRIGGER IF NOT EXISTS articles_au AFTER UPDATE ON articles BEGIN
-    INSERT INTO articles_fts(articles_fts, rowid, title, summary)
-    VALUES ('delete', old.id, old.title, old.summary);
-    INSERT INTO articles_fts(rowid, title, summary)
-    VALUES (new.id, new.title, new.summary);
+    INSERT INTO articles_fts(articles_fts, rowid, title, summary, keywords)
+    VALUES ('delete', old.id, old.title, old.summary, old.keywords);
+    INSERT INTO articles_fts(rowid, title, summary, keywords)
+    VALUES (new.id, new.title, new.summary, new.keywords);
 END;
 
 CREATE TABLE IF NOT EXISTS reports (
@@ -95,10 +96,59 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def _migrate_schema(conn: sqlite3.Connection) -> None:
+    """
+    Upgrade a database created before the `keywords` column existed.
+    `CREATE TABLE/TRIGGER IF NOT EXISTS` in SCHEMA only applies to a
+    brand-new DB — it silently no-ops against an existing articles table
+    that predates this column, so real accumulated data needs an explicit
+    ALTER + an FTS rebuild (FTS5's column list is fixed at creation time).
+    No-op on a fresh DB or one already migrated.
+    """
+    cols = {row["name"] for row in conn.execute("PRAGMA table_info(articles)").fetchall()}
+    if "keywords" in cols:
+        return
+
+    conn.execute("ALTER TABLE articles ADD COLUMN keywords TEXT")
+    conn.executescript("""
+        DROP TRIGGER IF EXISTS articles_ai;
+        DROP TRIGGER IF EXISTS articles_ad;
+        DROP TRIGGER IF EXISTS articles_au;
+        DROP TABLE IF EXISTS articles_fts;
+
+        CREATE VIRTUAL TABLE articles_fts USING fts5(
+            title, summary, keywords,
+            content='articles', content_rowid='id'
+        );
+
+        CREATE TRIGGER articles_ai AFTER INSERT ON articles BEGIN
+            INSERT INTO articles_fts(rowid, title, summary, keywords)
+            VALUES (new.id, new.title, new.summary, new.keywords);
+        END;
+
+        CREATE TRIGGER articles_ad AFTER DELETE ON articles BEGIN
+            INSERT INTO articles_fts(articles_fts, rowid, title, summary, keywords)
+            VALUES ('delete', old.id, old.title, old.summary, old.keywords);
+        END;
+
+        CREATE TRIGGER articles_au AFTER UPDATE ON articles BEGIN
+            INSERT INTO articles_fts(articles_fts, rowid, title, summary, keywords)
+            VALUES ('delete', old.id, old.title, old.summary, old.keywords);
+            INSERT INTO articles_fts(rowid, title, summary, keywords)
+            VALUES (new.id, new.title, new.summary, new.keywords);
+        END;
+    """)
+    conn.execute("""
+        INSERT INTO articles_fts(rowid, title, summary, keywords)
+        SELECT id, title, summary, keywords FROM articles
+    """)
+
+
 def init_db() -> None:
     conn = get_connection()
     try:
         conn.executescript(SCHEMA)
+        _migrate_schema(conn)
         conn.commit()
     finally:
         conn.close()
@@ -127,11 +177,15 @@ def insert_article(article: dict, site: str) -> int:
     """
     conn = get_connection()
     try:
+        keywords = article.get("keywords")
+        if isinstance(keywords, list):
+            keywords = ", ".join(keywords)
+
         cursor = conn.execute(
             """
             INSERT INTO articles
-                (url, title, published_at, crawled_at, site, topic, summary, embedding)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (url, title, published_at, crawled_at, site, topic, keywords, summary, embedding)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(url) DO NOTHING
             """,
             (
@@ -141,6 +195,7 @@ def insert_article(article: dict, site: str) -> int:
                 datetime.now(timezone.utc).isoformat(),
                 site,
                 article.get("topic"),
+                keywords,
                 article.get("summary"),
                 json.dumps(article["embedding"]) if article.get("embedding") else None,
             ),

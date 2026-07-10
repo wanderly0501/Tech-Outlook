@@ -48,7 +48,7 @@ anthropic       # Claude API + tool calling
 requests        # HTTP for crawler
 beautifulsoup4  # HTML parsing
 sqlite3         # knowledge base (stdlib)
-scikit-learn    # TF-IDF topic clustering
+scikit-learn    # TF-IDF + k-means topic clustering
 schedule        # daily cron-like trigger
 rich            # terminal UI for chat
 python-dotenv   # .env for API key
@@ -64,9 +64,13 @@ python-dotenv   # .env for API key
 
 ### Steps (in order, autonomous)
 1. Crawl The Verge for today's articles
-2. Summarize each article using Claude API
-3. Cluster articles into topics using TF-IDF + k-means
-4. Store articles + summaries + topics in SQLite
+2. Summarize each article using Claude API, extracting up to 10 keywords per
+   article from its own content in the same call (independent per article —
+   no cross-article coordination)
+3. Cluster articles into topics using TF-IDF + k-means (up to 10 clusters);
+   each cluster is labeled from the pooled keywords of its members (step 2),
+   not a fixed vocabulary
+4. Store articles + summaries + keywords + topic in SQLite
 5. Update `memory/top_of_mind.md` with top 5 findings
 6. Update `memory/pipeline_session.md` with pipeline run summary
 7. Generate daily HTML report with pie chart + highlights
@@ -101,7 +105,7 @@ python-dotenv   # .env for API key
 - Saves full conversation to `conversations` table on exit
 
 ### Tools available
-- `search_kb(query, mode, topic, date_from, date_to, limit)`
+- `search_kb(query, mode, topic, keyword, date_from, date_to, limit)`
 - `search_history(query, date_from, date_to, limit)` — search past conversation logs
 - `web_search(query, limit)`
 - `update_memory(file="preferences", content, mode)`
@@ -123,14 +127,14 @@ CREATE TABLE articles (
     published_at  TEXT,          -- ISO datetime
     crawled_at    TEXT,
     site          TEXT,          -- e.g. "theverge"
-    topic         TEXT,          -- assigned by clustering
-    content       TEXT,          -- cleaned full text
-    summary       TEXT,          -- Claude-generated summary
+    topic         TEXT,          -- assigned by TF-IDF + k-means clustering, labeled from keywords
+    keywords      TEXT,          -- up to 10 keywords, extracted per-article by Claude
+    summary       TEXT,          -- Claude-generated summary (full article text is not kept)
     embedding     TEXT           -- JSON float array, optional future use
 );
 
 CREATE VIRTUAL TABLE articles_fts USING fts5(
-    title, summary, content,
+    title, summary, keywords,
     content='articles', content_rowid='id'
 );
 
@@ -210,28 +214,41 @@ Written by pipeline agent after clustering.
 site: str   # "theverge"
 date: str   # "2026-07-05"
 
-# Output
+# Output — already summarized, keyword-tagged, topic-clustered, and stored
 [{
     "url": str,
     "title": str,
-    "published_at": str,   # ISO datetime
-    "content": str,        # cleaned article text
-    "summary": None        # filled downstream by Claude
+    "published_at": str,     # ISO datetime
+    "summary": str,          # Claude-generated, under 100 words
+    "keywords": list[str],   # up to 10, extracted per-article by Claude
+    "topic": str             # assigned by TF-IDF + k-means clustering
 }]
 ```
-Implementation: fetch The Verge RSS feed, follow article URLs, extract main content with BeautifulSoup. Skip articles already in DB (deduplicate on URL).
+Implementation: fetch the site, follow article URLs, extract main content with
+BeautifulSoup. Skip articles already in DB (deduplicate on URL). For each new
+article: summarize + extract keywords in one Claude call (tools/summarize.py),
+then cluster the whole batch into topics (tools/topics.py), then persist to
+SQLite. The full article body is only held in memory long enough to produce
+the summary — it is never stored.
 
 ---
 
-### search_kb(query, mode, topic, date_from, date_to, limit) → list[dict]
+### search_kb(query, mode, topic, keyword, date_from, date_to, limit) → list[dict]
 ```python
 # Input
 query:     str
-mode:      "text" | "topic" | "date"   # default: "text"
-topic:     str | None
+mode:      "text" | "topic" | "keyword" | "date"   # default: "text"
+topic:     str | None   # exact match against the clustering-assigned topic (mode=topic)
+keyword:   str | None   # substring match against the per-article keyword list (mode=keyword)
 date_from: str | None   # ISO date
 date_to:   str | None   # ISO date
 limit:     int          # default: 10
+
+# Note: prefer mode="keyword" over mode="topic" when filtering by subject.
+# topic is a dynamically-generated cluster label (e.g. "Xbox / Layoffs") that
+# requires an exact match and is hard to guess in advance; keyword is a
+# forgiving substring match against per-article terms, so it's much more
+# likely to actually find something without already knowing the exact label.
 
 # Output
 [{
@@ -239,6 +256,7 @@ limit:     int          # default: 10
     "title": str,
     "summary": str,
     "topic": str,
+    "keywords": str,       # comma-separated
     "published_at": str,
     "score": float         # FTS5 rank
 }]

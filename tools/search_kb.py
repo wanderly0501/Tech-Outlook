@@ -38,6 +38,7 @@ def _row_to_dict(row) -> dict:
         "title": row["title"],
         "summary": row["summary"],
         "topic": row["topic"],
+        "keywords": row["keywords"],
         "published_at": row["published_at"],
         "score": row["score"] if "score" in row.keys() else 0.0,
     }
@@ -47,6 +48,7 @@ def search_kb(
     query: str,
     mode: str = "text",
     topic: str | None = None,
+    keyword: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
     limit: int = 10,
@@ -55,14 +57,27 @@ def search_kb(
     conn = db.get_connection()
     try:
         if mode == "topic":
+            # Exact match against the clustering-assigned topic (tools/topics.py).
             sql = """
-                SELECT url, title, summary, topic, published_at, 0.0 AS score
+                SELECT url, title, summary, topic, keywords, published_at, 0.0 AS score
                 FROM articles
                 WHERE topic = ?
                 ORDER BY published_at DESC
                 LIMIT ?
             """
             rows = conn.execute(sql, (topic, limit)).fetchall()
+
+        elif mode == "keyword":
+            # Substring match against the per-article keyword list
+            # (tools/summarize.py) — a different, finer-grained axis than topic.
+            sql = """
+                SELECT url, title, summary, topic, keywords, published_at, 0.0 AS score
+                FROM articles
+                WHERE keywords LIKE ?
+                ORDER BY published_at DESC
+                LIMIT ?
+            """
+            rows = conn.execute(sql, (f"%{(keyword or '').lower()}%", limit)).fetchall()
 
         elif mode == "date":
             conditions = []
@@ -75,7 +90,7 @@ def search_kb(
                 params.append(date_to)
             where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
             sql = f"""
-                SELECT url, title, summary, topic, published_at, 0.0 AS score
+                SELECT url, title, summary, topic, keywords, published_at, 0.0 AS score
                 FROM articles
                 {where}
                 ORDER BY published_at DESC
@@ -85,7 +100,7 @@ def search_kb(
 
         else:  # mode == "text"
             sql = """
-                SELECT a.url, a.title, a.summary, a.topic, a.published_at,
+                SELECT a.url, a.title, a.summary, a.topic, a.keywords, a.published_at,
                        bm25(articles_fts) AS score
                 FROM articles_fts
                 JOIN articles a ON a.id = articles_fts.rowid
