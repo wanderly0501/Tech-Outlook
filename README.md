@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="logo/logo.png" alt="Tech Lookout logo" width="120">
-</p>
-
-# Tech Lookout
+# <img src="logo/logo.png" alt="" width="32" valign="middle"> Tech Lookout
 
 A local Python agent system that crawls tech news daily, maintains a knowledge
 base, generates reports, and lets you chat with it about tech trends.
